@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "NotebookLM: Delete All Notebooks",
+  "version": "1.0.0",
+  "description": "Click the extension button to delete all notebooks/projects in NotebookLM (from newest).",
+  "action": {
+    "default_title": "Delete all NotebookLM notebooks"
+  },
+  "permissions": [
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://notebooklm.google.com/*",
+    "https://www.notebooklm.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
