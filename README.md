@@ -7,7 +7,7 @@
 
 ## Features
 - **Bulk Deletion**: Deletes all notebooks visible on the page, starting from the newest.
-- **Safety Guard**: Includes a confirmation dialog before proceeding.
+- **Fast**: Uses MutationObserver for instant DOM change detection (~0.2s per notebook).
 - **Multi-Language Support**: Works with both English and Japanese interfaces.
 
 ## Installation
@@ -22,9 +22,7 @@
 
 1.  Go to [https://notebooklm.google.com/](https://notebooklm.google.com/) to view your project list.
 2.  Click the **NotebookLM: Delete All Notebooks** extension icon.
-3.  A confirmation dialog will appear: *"⚠️ This will delete ALL your NotebookLM notebooks/projects on this page. Proceed?"*
-4.  Click **OK** to confirm.
-5.  The extension will automatically delete notebooks one by one.
+3.  The extension will automatically delete notebooks one by one.
 
 > [!TIP]
 > If you have a large number of notebooks and the list is virtualized (lazy loaded), you may need to scroll down to load more items and run the extension again.

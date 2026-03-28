@@ -27,15 +27,35 @@ chrome.action.onClicked.addListener(async (tab) => {
         const DELETE_TEXTS = ["削除", "Delete"];
 
         // Helpers
-        const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+        const waitFor = (selectorFn, timeout = 3000) => new Promise((resolve) => {
+          const el = selectorFn();
+          if (el) return resolve(el);
 
-        const findButtonByText = (texts, filterFn = () => true) => {
-          const buttons = Array.from(document.querySelectorAll("button"));
-          return buttons.find((b) => {
-            const t = (b.innerText || "").trim();
-            return texts.some((x) => t.includes(x)) && filterFn(b);
+          const timer = setTimeout(() => { observer.disconnect(); resolve(null); }, timeout);
+          const observer = new MutationObserver(() => {
+            const el = selectorFn();
+            if (el) {
+              clearTimeout(timer);
+              observer.disconnect();
+              resolve(el);
+            }
           });
-        };
+          observer.observe(document.body, { childList: true, subtree: true });
+        });
+
+        const waitForRemoval = (selectorFn, timeout = 5000) => new Promise((resolve) => {
+          if (!selectorFn()) return resolve();
+
+          const timer = setTimeout(() => { observer.disconnect(); resolve(); }, timeout);
+          const observer = new MutationObserver(() => {
+            if (!selectorFn()) {
+              clearTimeout(timer);
+              observer.disconnect();
+              resolve();
+            }
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+        });
 
         const getMenuButtons = () => {
           for (const label of MENU_ARIA_LABELS) {
@@ -45,46 +65,58 @@ chrome.action.onClicked.addListener(async (tab) => {
           return [];
         };
 
-        // Main Logic
-        if (!confirm("⚠️ This will delete ALL your NotebookLM notebooks/projects on this page. Proceed?")) {
-          return;
-        }
+        const findDeleteMenuItem = () => {
+          const items = Array.from(document.querySelectorAll('[role="menuitem"]'));
+          return items.find((item) => {
+            const text = (item.innerText || "").trim();
+            return DELETE_TEXTS.some((d) => text.includes(d));
+          });
+        };
 
-        console.log("Starting deletion process...");
+        const findConfirmButton = () => {
+          const buttons = Array.from(document.querySelectorAll('button[type="submit"]'));
+          return buttons.find((b) => {
+            const text = (b.innerText || "").trim();
+            return DELETE_TEXTS.some((d) => text.includes(d));
+          });
+        };
+
+        // Main Logic
+        console.log("[NotebookLM Deleter] Starting deletion process...");
 
         while (true) {
-          const menuButtons = getMenuButtons();
+          // Wait for menu buttons to appear (Angular may be re-rendering the list)
+          const firstMenu = await waitFor(() => getMenuButtons()[0] || null, 3000);
 
-          if (menuButtons.length === 0) {
-            console.log("No notebooks found (menu buttons not present). Stopping.");
+          if (!firstMenu) {
+            console.log("[NotebookLM Deleter] No notebooks found. Stopping.");
             break;
           }
 
           // Click the first (newest) menu button
-          const button = menuButtons[0];
-          button.click();
-          await delay(300);
+          firstMenu.click();
 
-          // Click "Delete" in the opened menu
-          const deleteButton = findButtonByText(DELETE_TEXTS, (b) => !b.getAttribute("type"));
-          if (!deleteButton) {
-            console.log("Could not find a 'Delete' option in the menu. Stopping.");
-            // Close menu to avoid getting stuck? Or just break.
-            // Clicking elsewhere might be needed if we wanted to continue, but let's stop to be safe.
+          // Wait for delete menu item to appear
+          const deleteItem = await waitFor(findDeleteMenuItem);
+          if (!deleteItem) {
+            console.log("[NotebookLM Deleter] Could not find 'Delete' in menu. Stopping.");
+            document.body.click(); // close menu
             break;
           }
-          deleteButton.click();
-          await delay(300);
+          deleteItem.click();
 
-          // Click "Delete" in the confirmation dialog
-          const confirmButton = findButtonByText(DELETE_TEXTS, (b) => (b.getAttribute("type") || "") === "submit");
-          if (confirmButton) {
-            confirmButton.click();
-            await delay(1000); // Wait for deletion and list refresh
-          } else {
-            console.log("Could not find confirmation 'Delete' button. Stopping.");
+          // Wait for confirmation dialog's submit button
+          const confirmBtn = await waitFor(findConfirmButton);
+          if (!confirmBtn) {
+            console.log("[NotebookLM Deleter] Could not find confirmation button. Stopping.");
             break;
           }
+          confirmBtn.click();
+
+          // Wait for the confirmation dialog to close
+          await waitForRemoval(
+            () => document.querySelector('mat-dialog-container, [role="dialog"]')
+          );
         }
 
         console.log("Done. If items remain, please scroll down to load more and run the extension again.");
