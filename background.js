@@ -81,10 +81,25 @@ chrome.action.onClicked.addListener(async (tab) => {
           });
         };
 
+        const ensureListPage = async () => {
+          if (location.pathname.startsWith("/notebook/")) {
+            console.log("[NotebookLM Deleter] Navigated away from list. Returning...");
+            const params = new URLSearchParams(location.search);
+            const authuser = params.get("authuser") || "0";
+            location.href = "/?authuser=" + authuser;
+            await new Promise((r) => setTimeout(r, 3000));
+            return false;
+          }
+          return true;
+        };
+
         // Main Logic
         console.log("[NotebookLM Deleter] Starting deletion process...");
 
         while (true) {
+          // Guard: if Angular navigated to a notebook page, go back to the list
+          if (!(await ensureListPage())) continue;
+
           // Wait for menu buttons to appear (Angular may be re-rendering the list)
           const firstMenu = await waitFor(() => getMenuButtons()[0] || null, 3000);
 
@@ -93,8 +108,9 @@ chrome.action.onClicked.addListener(async (tab) => {
             break;
           }
 
-          // Click the first (newest) menu button
-          firstMenu.click();
+          // Click the first (newest) menu button — stop propagation to prevent
+          // Angular's PROJECT-BUTTON from navigating to the notebook page
+          firstMenu.dispatchEvent(new MouseEvent("click", { bubbles: false }));
 
           // Wait for delete menu item to appear
           const deleteItem = await waitFor(findDeleteMenuItem);
