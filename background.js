@@ -23,8 +23,9 @@ chrome.action.onClicked.addListener(async (tab) => {
           "プロジェクトの操作メニュー",     // JP
           "Project Actions Menu",          // EN
           "More actions",                  // fallback
+          "Menü mit Projektaktionen"     // DE
         ];
-        const DELETE_TEXTS = ["削除", "Delete"];
+        const DELETE_TEXTS = ["削除", "Delete", "Löschen"]; // JP, EN, DE (fallback)
 
         // Helpers
         const waitFor = (selectorFn, timeout = 3000) => new Promise((resolve) => {
@@ -74,10 +75,10 @@ chrome.action.onClicked.addListener(async (tab) => {
         };
 
         const findConfirmButton = () => {
-          const buttons = Array.from(document.querySelectorAll('button[type="submit"]'));
+          const buttons = Array.from(document.querySelectorAll('button[type="button"]'));
           return buttons.find((b) => {
             const text = (b.innerText || "").trim();
-            return DELETE_TEXTS.some((d) => text.includes(d));
+            return DELETE_TEXTS.some((d) => text.includes(d));           
           });
         };
 
